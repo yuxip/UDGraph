@@ -1,7 +1,7 @@
 //implement adjacency list for graph structure
 //and depth first / breath first traversal
 
-const int MAX_UNODE_NUM = 300;
+const int MAX_UNODE_NUM = 500;
 const int MAX_DNODE_NUM = 1500;
 
 #include<cstdlib>
