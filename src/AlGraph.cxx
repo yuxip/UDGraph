@@ -12,7 +12,7 @@ const int MAX_DNODE_NUM = 1500;
 
 #include<cstdlib>
 #include<string>
-#include<list>
+#include<cstring>
 #include<vector>
 #include<iostream>
 #include<set>
@@ -31,7 +31,7 @@ public:
 		mPre_score = 0;
 		mPost_score = 0;
 	}
-	;
+
 	int mAdjvex;	    //!< index of the domain/ip node in the DNode array.
 	ArcNode* mNextarc;  //!< next edge (starts with the same UUID node).
 	float mPre_score; //!< contribution to the pre-infection score of the domain.
@@ -49,7 +49,6 @@ public:
 		mDate = "";
 		mDtag = "";
 	}
-	;
 
 	void Print() {
 		std::cout << "SHA: " << mSha << ", Date: " << mDate << ", Dtag: "
@@ -61,7 +60,7 @@ public:
 	std::string mDtag;
 
 };
-typedef std::vector<UData_e*> UData;
+typedef std::vector<UData_e> UData;
 
 //! The UUID node.
 class UNode {
@@ -73,12 +72,11 @@ public:
 		mFirstarc = NULL;
 
 	}
-	;
 
 	void PrintData() {
 		std::cout << "---------------data for uuid: " << mUuid << std::endl;
 		for (UData::iterator it = mData.begin(); it != mData.end(); it++)
-			(*it)->Print();
+			(*it).Print();
 		std::cout << "----------------------------- " << std::endl;
 	}
 
@@ -103,7 +101,6 @@ public:
 		mPre_score_sum = 0;
 		mPost_score_sum = 0;
 	}
-	;
 
 	void PrintData() {
 		std::cout << "-----------------Domain-IP node: " << std::endl;
@@ -129,7 +126,7 @@ public:
 		vexnum = 0;
 		arcnum = 0;
 	}
-	;
+
 	UNode Uvertices[MAX_UNODE_NUM]; //!< replace it with dynamic allocation.
 	DNode Dvertices[MAX_DNODE_NUM];
 	int vexnum;
@@ -137,54 +134,72 @@ public:
 
 	//! build graph.
 	/*!
-	 * create UDGraph by reading domain_ip_uuid*.txt files and mal_recheck_SHA*.txt file,
-	 * each line of domain_ip_uuid*.txt is an infection instance on a particular uuid from a single day
-	 * confirm the infection by looking at the overlaps of the list of SHAs with those in
-	 * mal_recheck_SHA*.txt (done by find_infection.py, output format 'uuid sha' tuple in dsfilename),
-	 * then add the corresponding uuid node and the list of domain-ip node
+	 * create the list of domains contacted from infection instances.
+	 * begin with reading domain_ip_uuid*.txt files and mal_recheck_SHA*.txt file,
+	 * each line of domain_ip_uuid*.txt is an infection instance on a particular
+	 * uuid from a single day. confirm the infection by looking at the overlaps of the
+	 * list of SHAs with those in mal_recheck_SHA*.txt (done by preprocess_udgraph.py,
+	 * output: infection_file). then add the corresponding uuid node and the list
+	 * of domain-ip node.
 	 */
-	int createUDGraph(std::string dsfilelist);
+	int createUDGraph(const char* infection_file);
 
 	/*!
 	 * load existing UDGraph then update it with the domain_ip_uuid*.txt file
 	 */
-	int updateUDGraph(std::string udsfilelist);
+	int updateUDGraph(const char* infection_file);
 
 private:
 
 };
 
-int UDGraph::createUDGraph(std::string dsfilelist) {
+//! created UDGraph from batch-processed results.
+/*!
+ *
+ * @param infection_file contains the domains contacted in each infection instances
+ * format of infection_file:
+ * time_difference, domain name, uuid, date, [list of malicious SHAs involoved]
+ * @return
+ */
+int UDGraph::createUDGraph(const char* infection_file) {
 
-	std::ifstream inlist(dsfilelist, std::ios::in);
-	std::cout << "opening file list: " << dsfilelist << std::endl;
-	if (!inlist) {
-		std::cout << "ERROR opening file " << inlist << std::endl;
+	std::ifstream infile(infection_file, std::ios::in);
+	std::cout << "opening file: " << infection_file << std::endl;
+	if (!infile) {
+		std::cout << "ERROR opening file " << infection_file << std::endl;
 		return -1;
 	}
+	int tdiff;
 	char uuid[100];
-	char sha[100];
+	char sha_list[500];
 	char date[20];
-	char dfilename[200];
-	while (inlist >> uuid >> sha >> date) {
+	char domain[100];
+	for (std::string line; std::getline(infile, line);) {
 
-		sprintf(dfilename,
-				"/Users/yuxpan/fireamp/domain_ip_uuid%s_sha%s_%s.txt", uuid,
-				sha, date);
-		std::cout << "reading " << dfilename << std::endl;
-		std::ifstream infile(dfilename, std::ios::in);
-		if (!infile) {
-			std::cout << "ERROR opening file " << dfilename << std::endl;
-			return -1;
-		}
-		int tdiff;
-		char ip[50];
-		char url[1000];
-		for (std::string line; std::getline(infile, line);) {
-			std::cout << line << std::endl;
-			sscanf(line.c_str(), "%d,%s,%s", &tdiff, ip, url);
-			std::cout << tdiff << " " << ip << " " << url << std::endl;
+		sscanf(line.c_str(), "%d %s %s %s %[^\t\n]", &tdiff, domain, uuid, date,
+				sha_list);
+		std::cout << tdiff << " " << domain << " " << uuid << " " << date << " "
+				<< sha_list << std::endl;
+		/*!
+		 * create UNode
+		 */
 
+		/*!
+		 * create DNode
+		 */
+
+		/*!
+		 * break up the sha_list into an array of SHAs
+		 * and add them to the UData section of UNode
+		 */
+		char *token = std::strtok(sha_list, " ");
+		int i_sha = 0;
+		while (token != NULL) {
+			std::cout << "i_sha: " << i_sha << ", sha: " << token << std::endl;
+			token = std::strtok(NULL, " ");
+			i_sha++;
+			if (i_sha > 9)
+				break;
 		}
 
 	}
@@ -192,7 +207,7 @@ int UDGraph::createUDGraph(std::string dsfilelist) {
 	return 1;
 }
 
-int UDGraph::updateUDGraph(std::string udsfilelist) {
+int UDGraph::updateUDGraph(const char* infection_file) {
 
 	return 1;
 }
@@ -200,7 +215,7 @@ int UDGraph::updateUDGraph(std::string udsfilelist) {
 int main() {
 
 	UDGraph* ag = new UDGraph();
-	ag->createUDGraph("/Users/yuxpan/fireamp/dstuple_20151006to1021.txt");
+	ag->createUDGraph("/Users/yuxpan/fireamp/crypto_infections.txt");
 
 	return 1;
 }
