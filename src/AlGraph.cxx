@@ -25,16 +25,17 @@ const int MAX_DNODE_NUM = 1500;
 class ArcNode {
 
 public:
-	ArcNode() { 
-		mAdjvex = -1; 
-		mNextarc = NULL; 
+	ArcNode() {
+		mAdjvex = -1;
+		mNextarc = NULL;
 		mPre_score = 0;
 		mPost_score = 0;
-	};	
+	}
+	;
 	int mAdjvex;	    //!< index of the domain/ip node in the DNode array.
 	ArcNode* mNextarc;  //!< next edge (starts with the same UUID node).
-	float mPre_score;   //!< contribution to the pre-infection score of the domain.
-	float mPost_score;  //!< contribution to the post-infection score of the domain.
+	float mPre_score; //!< contribution to the pre-infection score of the domain.
+	float mPost_score; //!< contribution to the post-infection score of the domain.
 //	EdgeData* edata;    //!< points to the list of (score, pre-/post-flag, date) data on the heap.
 
 };
@@ -47,10 +48,12 @@ public:
 		mSha = "";
 		mDate = "";
 		mDtag = "";
-	};
-	
-	void Print(){
-		std::cout << "SHA: " << mSha << ", Date: " << mDate << ", Dtag: " << mDtag << std::endl;
+	}
+	;
+
+	void Print() {
+		std::cout << "SHA: " << mSha << ", Date: " << mDate << ", Dtag: "
+				<< mDtag << std::endl;
 	}
 
 	std::string mSha;
@@ -63,20 +66,21 @@ typedef std::vector<UData_e*> UData;
 //! The UUID node.
 class UNode {
 
-public:	
-	UNode() { 
+public:
+	UNode() {
 		mUuid = "";
 		mGuid = "";
-		mFirstarc = NULL; 
-		
-	};
+		mFirstarc = NULL;
+
+	}
+	;
 
 	void PrintData() {
 		std::cout << "---------------data for uuid: " << mUuid << std::endl;
-		for(UData::iterator it = mData.begin(); it != mData.end(); it++)
+		for (UData::iterator it = mData.begin(); it != mData.end(); it++)
 			(*it)->Print();
 		std::cout << "----------------------------- " << std::endl;
-	}	
+	}
 
 	std::string mUuid;	//!< UUID/end-point id.
 	std::string mGuid;	//!< business group id.
@@ -89,7 +93,7 @@ public:
 };
 
 //! Domain(IP) node
-class DNode{
+class DNode {
 
 public:
 	DNode() {
@@ -97,9 +101,10 @@ public:
 		mIp = "";
 		mReptool_tag = false;
 		mPre_score_sum = 0;
-		mPost_score_sum = 0;	
-	};
-	
+		mPost_score_sum = 0;
+	}
+	;
+
 	void PrintData() {
 		std::cout << "-----------------Domain-IP node: " << std::endl;
 		std::cout << "Domain: " << mDomain << std::endl;
@@ -107,29 +112,29 @@ public:
 		std::cout << "Reptool_tag: " << mReptool_tag << std::endl;
 		std::cout << "Pre_score_sum: " << mPre_score_sum << std::endl;
 		std::cout << "Post_score_sum: " << mPost_score_sum << std::endl;
-	
+
 	}
 	std::string mDomain;
 	std::string mIp;
 	bool mReptool_tag;    //!< whether it's already marked in reptool.
 	float mPre_score_sum; //!< sum of pre-infection scores on all edges.
-	float mPost_score_sum;//!< sum of post-infection scores on all edges.
+	float mPost_score_sum; //!< sum of post-infection scores on all edges.
 
 };
 
+class UDGraph {
 
-class UDGraph{
-	
 public:
 	UDGraph() {
 		vexnum = 0;
 		arcnum = 0;
-	};
+	}
+	;
 	UNode Uvertices[MAX_UNODE_NUM]; //!< replace it with dynamic allocation.
 	DNode Dvertices[MAX_DNODE_NUM];
 	int vexnum;
 	int arcnum; //!< number of nodes and edges.
-	
+
 	//! build graph.
 	/*!
 	 * create UDGraph by reading domain_ip_uuid*.txt files and mal_recheck_SHA*.txt file,
@@ -146,15 +151,14 @@ public:
 	int updateUDGraph(std::string udsfilelist);
 
 private:
-	
+
 };
 
-
-int UDGraph::createUDGraph(std::string dsfilelist){
+int UDGraph::createUDGraph(std::string dsfilelist) {
 
 	std::ifstream inlist(dsfilelist, std::ios::in);
 	std::cout << "opening file list: " << dsfilelist << std::endl;
-	if(!inlist){
+	if (!inlist) {
 		std::cout << "ERROR opening file " << inlist << std::endl;
 		return -1;
 	}
@@ -162,19 +166,21 @@ int UDGraph::createUDGraph(std::string dsfilelist){
 	char sha[100];
 	char date[20];
 	char dfilename[200];
-	while(inlist>>uuid>>sha>>date){
+	while (inlist >> uuid >> sha >> date) {
 
-		sprintf(dfilename, "/Users/yuxpan/fireamp/domain_ip_uuid%s_sha%s_%s.txt", uuid, sha, date);
+		sprintf(dfilename,
+				"/Users/yuxpan/fireamp/domain_ip_uuid%s_sha%s_%s.txt", uuid,
+				sha, date);
 		std::cout << "reading " << dfilename << std::endl;
 		std::ifstream infile(dfilename, std::ios::in);
-		if(!infile){
+		if (!infile) {
 			std::cout << "ERROR opening file " << dfilename << std::endl;
 			return -1;
 		}
 		int tdiff;
 		char ip[50];
 		char url[1000];
-		for (std::string line; std::getline(infile, line); ){
+		for (std::string line; std::getline(infile, line);) {
 			std::cout << line << std::endl;
 			sscanf(line.c_str(), "%d,%s,%s", &tdiff, ip, url);
 			std::cout << tdiff << " " << ip << " " << url << std::endl;
@@ -182,20 +188,19 @@ int UDGraph::createUDGraph(std::string dsfilelist){
 		}
 
 	}
-	
-	return 1;
-}
-
-int UDGraph::updateUDGraph(std::string udsfilelist){
 
 	return 1;
 }
-	
 
-int main(){
-	
+int UDGraph::updateUDGraph(std::string udsfilelist) {
+
+	return 1;
+}
+
+int main() {
+
 	UDGraph* ag = new UDGraph();
 	ag->createUDGraph("/Users/yuxpan/fireamp/dstuple_20151006to1021.txt");
-	
+
 	return 1;
 }
