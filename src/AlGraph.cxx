@@ -1,5 +1,11 @@
-//implement adjacency list for graph structure
-//and depth first / breath first traversal
+/*! \brief UUID-Domain Graph.
+ *
+ * Created on: Oct. 24, 2015
+ * Author: Yuxi Pan
+ *
+ * implement adjacency list for graph structure
+ * and depth first / breath first traversal
+ */
 
 const int MAX_UNODE_NUM = 500;
 const int MAX_DNODE_NUM = 1500;
@@ -12,9 +18,11 @@ const int MAX_DNODE_NUM = 1500;
 #include<set>
 #include<cmath>
 #include<fstream>
-//UUID-domain/ip bi-partite graph, edges from UUID node to domain/ip node
+//!UUID-domain bi-partite graph.
+/*! graph edges from UUID node to domain/ip node */
 
-class ArcNode {   //edges
+//! The edge class.
+class ArcNode {
 
 public:
 	ArcNode() { 
@@ -23,14 +31,15 @@ public:
 		mPre_score = 0;
 		mPost_score = 0;
 	};	
-	int mAdjvex;	       //index of the domain/ip node in the DNode array
-	ArcNode* mNextarc;     //next edge (with the common UUID node)
-	float mPre_score;      //pre-infection score along this edge 
-	float mPost_score;     //post-infection score along this edge
-//	EdgeData* edata;       //points to the list of (score, pre-/post-flag, date) data on the heap
+	int mAdjvex;	    //!< index of the domain/ip node in the DNode array.
+	ArcNode* mNextarc;  //!< next edge (starts with the same UUID node).
+	float mPre_score;   //!< contribution to the pre-infection score of the domain.
+	float mPost_score;  //!< contribution to the post-infection score of the domain.
+//	EdgeData* edata;    //!< points to the list of (score, pre-/post-flag, date) data on the heap.
 
 };
 
+//! The data element of a UUID node
 class UData_e {
 
 public:
@@ -41,7 +50,7 @@ public:
 	};
 	
 	void Print(){
-		std::cout << "SHA: " << mSha << ", Date: " << mDate << ",Dtag: " << mDtag << std::endl;
+		std::cout << "SHA: " << mSha << ", Date: " << mDate << ", Dtag: " << mDtag << std::endl;
 	}
 
 	std::string mSha;
@@ -51,8 +60,8 @@ public:
 };
 typedef std::vector<UData_e*> UData;
 
-
-class UNode { //UUID node --> to form a static array
+//! The UUID node.
+class UNode {
 
 public:	
 	UNode() { 
@@ -69,14 +78,18 @@ public:
 		std::cout << "----------------------------- " << std::endl;
 	}	
 
-	std::string mUuid;
-	std::string mGuid;   //business group id
-	UData mData;         //points to the list of infection instance data on this UUID (SHA, date, detection.tag), size unknown
-	ArcNode* mFirstarc;  //first edge in linked list
+	std::string mUuid;	//!< UUID/end-point id.
+	std::string mGuid;	//!< business group id.
+	//! The data section.
+	/*! points to the details of the infection instance
+	 *  from this UUID (SHA, date, detection.tag)
+	 */
+	UData mData;
+	ArcNode* mFirstarc;  //!< first edge in linked list.
 };
 
-
-class DNode{ //Domain-IP node
+//! Domain(IP) node
+class DNode{
 
 public:
 	DNode() {
@@ -98,11 +111,10 @@ public:
 	}
 	std::string mDomain;
 	std::string mIp;
-	bool mReptool_tag;    //whether it's already marked in reptool
-	float mPre_score_sum; //sum of pre-infection scores on all edges
-	float mPost_score_sum;//sum of post-infection scores on all edges
+	bool mReptool_tag;    //!< whether it's already marked in reptool.
+	float mPre_score_sum; //!< sum of pre-infection scores on all edges.
+	float mPost_score_sum;//!< sum of post-infection scores on all edges.
 
-	//DNode does not initiate any links
 };
 
 
@@ -113,34 +125,27 @@ public:
 		vexnum = 0;
 		arcnum = 0;
 	};
-	UNode Uvertices[MAX_UNODE_NUM]; //replace it with dynamic allocation
+	UNode Uvertices[MAX_UNODE_NUM]; //!< replace it with dynamic allocation.
 	DNode Dvertices[MAX_DNODE_NUM];
 	int vexnum;
-	int arcnum; //number of nodes and edges;
+	int arcnum; //!< number of nodes and edges.
 	
-	//build graph 
-	int createUDGraph(std::string dsfilelist);
-	/*
+	//! build graph.
+	/*!
 	 * create UDGraph by reading domain_ip_uuid*.txt files and mal_recheck_SHA*.txt file,
 	 * each line of domain_ip_uuid*.txt is an infection instance on a particular uuid from a single day
 	 * confirm the infection by looking at the overlaps of the list of SHAs with those in
 	 * mal_recheck_SHA*.txt (done by find_infection.py, output format 'uuid sha' tuple in dsfilename),
 	 * then add the corresponding uuid node and the list of domain-ip node
 	 */
+	int createUDGraph(std::string dsfilelist);
 
-	int updateUDGraph(std::string udsfilelist);
-	/*
+	/*!
 	 * load existing UDGraph then update it with the domain_ip_uuid*.txt file
 	 */
-	
-	//depth first traverse
-	//void DFSTraverse( int (*visit)(int v) ); //call (*visit)() with argument v for each node during DFS traversal 	
-
-	//bool visited[MAX_VERTEX_NUM]; //flags for graph traversal
+	int updateUDGraph(std::string udsfilelist);
 
 private:
-	
-	//DFS(int v); //helper function for DFSTraverse; depth-first visit the vth node of the current graph
 	
 };
 
