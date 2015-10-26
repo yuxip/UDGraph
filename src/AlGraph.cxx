@@ -24,12 +24,13 @@ class ArcData {
 
 public:
 	ArcData() {
-//		mDate = "";
-//		mDtag = "";
+
+		mTdiff = 999;
 	}
 
 	void Print() {
 		std::cout << " Date: " << mDate << std::endl;
+		std::cout << "t_diff: " << mTdiff << std::endl;
 		std::cout << "---------------SHA list: " << std::endl;
 		for (std::vector<std::string>::iterator it = mSha_list.begin();
 				it != mSha_list.end(); it++)
@@ -37,6 +38,7 @@ public:
 
 	}
 
+	int mTdiff;
 	std::vector<std::string> mSha_list;
 	std::string mDate;
 //	std::string mDtag;
@@ -165,12 +167,24 @@ public:
 	 */
 	int createUDGraph(const char* infection_file);
 
+	//! compute the pre-/post-infection scores for each domain.
+	/*!
+	 * for each UNode loop over the ArcNode in its linked list,
+	 * given the date and t_diff info on each ArcNode compute
+	 * the pre-/post-infection scores for each DNode.
+	 * @param today format "20151026"
+	 * @return whether the calculate is sucessful
+	 */
+	int computeDNodeScore();
+
 	/*!
 	 * load existing UDGraph then update it
 	 */
 	int updateUDGraph(const char* infection_file);
 
 private:
+
+	float score(int t_diff); //!< calculate the contribution to the score of a domain.
 
 };
 
@@ -209,9 +223,9 @@ int UDGraph::createUDGraph(const char* infection_file) {
 						std::pair<std::string, UNode>(uuid,
 								UNode(uuid, "", NULL)));
 		UNode* rUNode = std::addressof((*(rloc.first)).second);
-		std::cout << "rUNode exist: " << !(rloc.second) << " UUID:"
-				<< rUNode->mUuid << " mFirstarc: " << rUNode->mFirstarc
-				<< std::endl;
+		//std::cout << "rUNode exist: " << !(rloc.second) << " UUID:"
+		//	<< rUNode->mUuid << " mFirstarc: " << rUNode->mFirstarc
+		//<< std::endl;
 
 		/*!
 		 * insert new DNode if it does not exist.
@@ -232,6 +246,7 @@ int UDGraph::createUDGraph(const char* infection_file) {
 		 */
 		ArcNode* new_edge = new ArcNode();
 		new_edge->mKey = domain;
+		(new_edge->mArcdata).mTdiff = tdiff;
 		(new_edge->mArcdata).mDate = date;
 		char *token = std::strtok(sha_list, " ");
 		int i_sha = 0;
@@ -245,10 +260,13 @@ int UDGraph::createUDGraph(const char* infection_file) {
 			if (i_sha > 9)
 				break;
 		}
-		//std::cout << "new_edge: mKey: " << new_edge->mKey << std::endl;
-		//std::cout << "----mArcdata:" << std::endl;
-		//new_edge->PrintData();
-		//std::cout << std::endl;
+
+		/*std::cout << "new_edge: mKey: " << new_edge->mKey << " t_diff: "
+		 << (new_edge->mArcdata).mTdiff << std::endl;
+		 std::cout << "----mArcdata:" << std::endl;
+		 new_edge->PrintData();
+		 std::cout << std::endl;
+		 */
 
 		/*!
 		 * insert the ArcNode to the UNode's linked list.
@@ -268,13 +286,52 @@ int UDGraph::createUDGraph(const char* infection_file) {
 			}
 			p_cur->mNextarc = new_edge;
 		}
-		std::cout << "new_edge added as the " << i_node
-				<< " ArcNode of the UNode, domain: " << domain << std::endl;
+		//std::cout << "new_edge added as the " << i_node
+		//		<< " ArcNode of the UNode, domain: " << domain << std::endl;
 		std::cout << std::endl;
 
 	}
 
+	computeDNodeScore();
+
 	return 1;
+}
+
+int UDGraph::computeDNodeScore() {
+
+	for (std::map<std::string, UNode>::iterator it = Uvertices.begin();
+			it != Uvertices.end(); it++) {
+		ArcNode* edge = ((*it).second).mFirstarc;
+		while (edge) {
+			std::string domain = edge->mKey;
+			int t_diff = (edge->mArcdata).mTdiff;
+			float d_score = score(t_diff);
+			if (Dvertices.find(domain) == Dvertices.end()) {
+				std::cout << "ERROR " << domain
+						<< " does not exist in Dvertices" << std::endl;
+			}
+			if (t_diff <= 0)
+				Dvertices[domain].mPre_score_sum += d_score;
+			else
+				Dvertices[domain].mPost_score_sum += d_score;
+
+			edge = edge->mNextarc;
+		}
+	}
+
+	//! Print the scores of each domain
+	for (std::map<std::string, DNode>::iterator it = Dvertices.begin();
+			it != Dvertices.end(); it++)
+		((*it).second).PrintData();
+
+	return 1;
+}
+
+float UDGraph::score(int t_diff) {
+
+	float sigma = 30.0;
+	return exp(-pow(t_diff / sigma, 2.0));
+
 }
 
 int UDGraph::updateUDGraph(const char* infection_file) {
