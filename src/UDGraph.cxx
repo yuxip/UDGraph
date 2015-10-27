@@ -391,7 +391,7 @@ int main() {
 	ud.createUDGraph("/Users/yuxpan/fireamp/crypto_infections_1.txt",
 			"20151025");
 	ud.updateUDGraph("/Users/yuxpan/fireamp/crypto_infections_2.txt",
-			"20151025");
+			"20151027");
 	ud.reportScores();
 
 	return 1;
