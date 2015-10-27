@@ -15,8 +15,11 @@
 #include<iostream>
 #include<set>
 #include<cmath>
+#include<ctime>
 #include<fstream>
-//!UUID-domain bi-partite graph.
+#include<algorithm>
+
+//! UUID-domain bi-partite graph.
 /*! graph edges from UUID node to domain/ip node */
 
 //! The data element of an edge
@@ -173,9 +176,9 @@ public:
 	 * given the date and t_diff info on each ArcNode compute
 	 * the pre-/post-infection scores for each DNode.
 	 * @param today format "20151026"
-	 * @return whether the calculate is sucessful
+	 * @return whether the calculate is successful
 	 */
-	int computeDNodeScore();
+	int computeDNodeScore(const char* today);
 
 	/*!
 	 * load existing UDGraph then update it
@@ -183,8 +186,14 @@ public:
 	int updateUDGraph(const char* infection_file);
 
 private:
-
-	float score(int t_diff); //!< calculate the contribution to the score of a domain.
+	//! calculate the contribution to the score of a domain.
+	/*!
+	 *
+	 * @param t_diff time difference w.r.t. *.tmp
+	 * @param days number of days since today \sa computeDNodeScore
+	 * @return
+	 */
+	float score(int t_diff, int days);
 
 };
 
@@ -292,20 +301,34 @@ int UDGraph::createUDGraph(const char* infection_file) {
 
 	}
 
-	computeDNodeScore();
+	computeDNodeScore("20151025");
 
 	return 1;
 }
 
-int UDGraph::computeDNodeScore() {
+int UDGraph::computeDNodeScore(const char* today) {
 
+	std::string s_today(today);
+	int t_year = std::stoi(s_today.substr(0, 4));
+	int t_month = std::stoi(s_today.substr(4, 2));
+	int t_day = std::stoi(s_today.substr(6, 2));
+	std::cout << "t_year: " << t_year << " t_month: " << t_month << " t_day: "
+			<< t_day << std::endl;
 	for (std::map<std::string, UNode>::iterator it = Uvertices.begin();
 			it != Uvertices.end(); it++) {
 		ArcNode* edge = ((*it).second).mFirstarc;
 		while (edge) {
 			std::string domain = edge->mKey;
+			std::string date = (edge->mArcdata).mDate;
+			int year = std::stoi(date.substr(0, 4));
+			int month = std::stoi(date.substr(4, 2));
+			int day = std::stoi(date.substr(6, 2));
+			int days = 365 * (t_year - year) + 30 * (t_month - month)
+					+ (t_day - day);
+			std::cout << "year: " << year << " month: " << month << " day: "
+					<< day << " #days: " << days << std::endl;
 			int t_diff = (edge->mArcdata).mTdiff;
-			float d_score = score(t_diff);
+			float d_score = score(t_diff, days);
 			if (Dvertices.find(domain) == Dvertices.end()) {
 				std::cout << "ERROR " << domain
 						<< " does not exist in Dvertices" << std::endl;
@@ -319,19 +342,60 @@ int UDGraph::computeDNodeScore() {
 		}
 	}
 
-	//! Print the scores of each domain
+	//! sort the scores
+	std::vector < std::pair<float, std::string> > post_scores;
+	std::vector < std::pair<float, std::string> > pre_scores;
 	for (std::map<std::string, DNode>::iterator it = Dvertices.begin();
-			it != Dvertices.end(); it++)
+			it != Dvertices.end(); it++) {
+
 		((*it).second).PrintData();
+		std::string domain = (*it).second.mDomain;
+		float post_score = (*it).second.mPost_score_sum;
+		float pre_score = (*it).second.mPre_score_sum;
+		if (post_score > 0)
+			post_scores.push_back(
+					std::pair<float, std::string>(post_score, domain));
+		if (pre_score > 0)
+			pre_scores.push_back(
+					std::pair<float, std::string>(pre_score, domain));
+
+	}
+	std::sort(pre_scores.begin(), pre_scores.end());
+	std::sort(post_scores.begin(), post_scores.end());
+
+	//! Print the scores of each domain
+	char outfilename_pre[50];
+	sprintf(outfilename_pre, "pre_score_%s.txt", today);
+	std::fstream outfile_pre(outfilename_pre, std::ios::out);
+	for (std::vector<std::pair<float, std::string> >::iterator it =
+			pre_scores.begin(); it != pre_scores.end(); it++) {
+
+		std::string domain = (*it).second;
+		float pre_score = (*it).first;
+		outfile_pre << domain << " " << pre_score << std::endl;
+	}
+
+	char outfilename_post[50];
+	sprintf(outfilename_post, "post_score_%s.txt", today);
+	std::fstream outfile_post(outfilename_post, std::ios::out);
+	for (std::vector<std::pair<float, std::string> >::iterator it =
+			post_scores.begin(); it != post_scores.end(); it++) {
+
+		std::string domain = (*it).second;
+		float post_score = (*it).first;
+		outfile_post << domain << " " << post_score << std::endl;
+	}
 
 	return 1;
 }
 
-float UDGraph::score(int t_diff) {
+float UDGraph::score(int t_diff, int days) {
 
 	float sigma = 30.0;
-	return exp(-pow(t_diff / sigma, 2.0));
-
+	float T_half = 60.0; //! score drops by a factor of e^-1 in 2 months
+	float dscore = exp(-pow(t_diff / sigma, 2.0));
+	return dscore * exp(-days / T_half);
+//	return dscore;
 }
 
 int UDGraph::updateUDGraph(const char* infection_file) {
